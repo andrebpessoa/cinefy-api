@@ -1,0 +1,16 @@
+node_modules
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.md
+!README.md
+coverage
+dist
+.server
+terminals
+.cursor
+.vscode
+**/*.test.ts
+biome.json
