@@ -1,30 +1,39 @@
+import "dotenv/config";
 import { createApp } from "./app";
-import { auth } from "./lib/auth";
+import { createContainer } from "./container";
 import { errorSummaryForLog } from "./lib/errors";
 import { logger } from "./lib/logger";
+import { closeRedis } from "./lib/redis";
 import { startCatalogScheduler } from "./modules/catalog/scheduler";
-import { catalogService } from "./modules/catalog/service";
 import { runCatalogSyncIfIdle } from "./modules/catalog/sync-coordinator";
 
-const port = Number(process.env.PORT ?? 3000);
-const hostname = process.env.HOST ?? "0.0.0.0";
+const container = await createContainer();
+const app = createApp(container).listen({
+	port: container.env.PORT,
+	hostname: container.env.HOST,
+});
 
-const app = createApp({ authHandler: auth.handler }).listen({ port, hostname });
-const cronJob = startCatalogScheduler(catalogService);
+const cronJob = startCatalogScheduler(container.catalogService, {
+	schedule: container.env.CATALOG_SYNC_CRON,
+});
 
 const startupSyncByKind = {
-	vod: () => catalogService.syncVodStreams(),
-	series: () => catalogService.syncSeriesStreams(),
-	live: () => catalogService.syncLiveStreams(),
+	vod: () => container.catalogService.syncVodStreams(),
+	series: () => container.catalogService.syncSeriesStreams(),
+	live: () => container.catalogService.syncLiveStreams(),
 } satisfies Record<"vod" | "series" | "live", () => Promise<void>>;
 
-const shutdown = () => {
+const shutdown = async () => {
 	cronJob.stop();
 	app.stop();
+	await Promise.all([
+		container.pool.end().catch(() => {}),
+		closeRedis(container.redis),
+	]);
 	process.exit(0);
 };
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => void shutdown());
+process.on("SIGTERM", () => void shutdown());
 
 for (const kind of ["vod", "series", "live"] as const) {
 	void runCatalogSyncIfIdle(startupSyncByKind[kind], "startup", kind).catch(

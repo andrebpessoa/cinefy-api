@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { extractValidationErrors, mapErrorToProblem } from "./errors";
+import { extractValidationErrors, mapErrorToProblem } from "../errors";
+
+const traceId = "test-trace-id";
 
 describe("extractValidationErrors", () => {
 	it("retorna lista vazia quando erro nao tem issues", () => {
@@ -26,6 +28,7 @@ describe("mapErrorToProblem", () => {
 			},
 			pathname: "/catalog/vod",
 			isProduction: false,
+			traceId,
 		});
 
 		expect(problem).toEqual({
@@ -34,6 +37,7 @@ describe("mapErrorToProblem", () => {
 			status: 400,
 			detail: "Invalid query",
 			instance: "/catalog/vod",
+			traceId,
 			errors: [{ path: "query.limit", message: "must be <= 200" }],
 		});
 	});
@@ -44,6 +48,7 @@ describe("mapErrorToProblem", () => {
 			error: new Error("nope"),
 			pathname: "/missing",
 			isProduction: false,
+			traceId,
 		});
 
 		expect(problem).toEqual({
@@ -52,6 +57,7 @@ describe("mapErrorToProblem", () => {
 			status: 404,
 			detail: "The requested resource was not found",
 			instance: "/missing",
+			traceId,
 		});
 	});
 
@@ -61,6 +67,7 @@ describe("mapErrorToProblem", () => {
 			error: new Error("bad body"),
 			pathname: "/catalog/vod/sync",
 			isProduction: false,
+			traceId,
 		});
 
 		expect(problem).toEqual({
@@ -69,6 +76,7 @@ describe("mapErrorToProblem", () => {
 			status: 400,
 			detail: "The request body is malformed or invalid",
 			instance: "/catalog/vod/sync",
+			traceId,
 		});
 	});
 
@@ -78,6 +86,7 @@ describe("mapErrorToProblem", () => {
 			error: new Error("secret stack detail"),
 			pathname: "/catalog/vod/sync",
 			isProduction: true,
+			traceId,
 		});
 
 		expect(problem).toEqual({
@@ -86,6 +95,7 @@ describe("mapErrorToProblem", () => {
 			status: 500,
 			detail: "An unexpected error occurred",
 			instance: "/catalog/vod/sync",
+			traceId,
 		});
 	});
 
@@ -95,6 +105,7 @@ describe("mapErrorToProblem", () => {
 			error: new Error("sync exploded"),
 			pathname: "/catalog/vod/sync",
 			isProduction: false,
+			traceId,
 		});
 
 		expect(problem).toEqual({
@@ -103,6 +114,7 @@ describe("mapErrorToProblem", () => {
 			status: 500,
 			detail: "sync exploded",
 			instance: "/catalog/vod/sync",
+			traceId,
 		});
 	});
 });

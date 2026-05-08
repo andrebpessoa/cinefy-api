@@ -1,49 +1,50 @@
 import { openapi } from "@elysia/openapi";
 import Elysia from "elysia";
-import { auth } from "./auth";
+import type { AuthInstance } from "./auth";
 
-type OpenApiSchema = Awaited<ReturnType<typeof auth.api.generateOpenAPISchema>>;
-type OpenApiPaths = OpenApiSchema["paths"];
-type OpenApiComponents = OpenApiSchema["components"];
+export async function createOpenapiPlugin(auth: AuthInstance) {
+	type OpenApiPaths = Awaited<
+		ReturnType<typeof auth.api.generateOpenAPISchema>
+	>["paths"];
 
-let _schema: Promise<OpenApiSchema>;
-const getSchema = async () => (_schema ??= auth.api.generateOpenAPISchema());
+	const { paths: rawPaths, components } =
+		await auth.api.generateOpenAPISchema();
 
-function isOperationObject(value: unknown): value is { tags?: string[] } {
-	return typeof value === "object" && value !== null;
-}
+	function isOperationObject(value: unknown): value is { tags?: string[] } {
+		return typeof value === "object" && value !== null;
+	}
 
-export const OpenAPI = {
-	getPaths: (prefix = "/auth/api") =>
-		getSchema().then(({ paths }) => {
-			const reference: OpenApiPaths = Object.create(null) as OpenApiPaths;
-			for (const path of Object.keys(paths)) {
-				const key = prefix + path;
-				reference[key] = paths[path];
-				const pathItem = paths[path];
-				if (typeof pathItem !== "object" || pathItem === null) {
-					continue;
-				}
+	function buildPaths(prefix: string, paths: OpenApiPaths): OpenApiPaths {
+		const reference: OpenApiPaths = Object.create(null) as OpenApiPaths;
+		for (const path of Object.keys(paths)) {
+			const key = prefix + path;
+			const item = paths[path];
+			if (item === undefined) continue;
+			reference[key] = item;
+			if (typeof item !== "object" || item === null) {
+				continue;
+			}
 
-				for (const method of Object.keys(pathItem)) {
-					const operation = (reference[key] as Record<string, unknown>)[method];
-					if (isOperationObject(operation)) {
-						operation.tags = ["Better Auth"];
-					}
+			for (const method of Object.keys(item)) {
+				const operation = (item as Record<string, unknown>)[method];
+				if (isOperationObject(operation)) {
+					operation.tags = ["Better Auth"];
 				}
 			}
-			return reference;
-		}) as Promise<OpenApiPaths>,
-	components: getSchema().then(
-		({ components }) => components,
-	) as Promise<OpenApiComponents>,
-} as const;
+		}
+		return reference;
+	}
 
-export const openapiPlugin = new Elysia().use(
-	openapi({
-		documentation: {
-			components: await OpenAPI.components,
-			paths: await OpenAPI.getPaths(),
-		},
-	} as Parameters<typeof openapi>[0]),
-);
+	return new Elysia().use(
+		openapi({
+			documentation: {
+				components,
+				paths: buildPaths("/auth/api", rawPaths),
+				info: {
+					title: "Cinefy API",
+					version: "1.0.0",
+				},
+			},
+		} as Parameters<typeof openapi>[0]),
+	);
+}

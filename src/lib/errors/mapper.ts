@@ -1,16 +1,9 @@
 import { DrizzleQueryError } from "drizzle-orm";
-
-type ProblemDetails = {
-	type: string;
-	title: string;
-	status: number;
-	detail?: string;
-	instance?: string;
-	errors?: Array<{
-		path?: string;
-		message: string;
-	}>;
-};
+import { ZodError } from "zod";
+import type { ProblemDetails } from "./app-error";
+import { AppError } from "./app-error";
+import { ValidationAppError } from "./domain";
+import { PROBLEM_TYPES } from "./types";
 
 type ValidationLikeError = {
 	message?: string;
@@ -35,54 +28,28 @@ function normalizePath(path: string | Array<string | number> | undefined) {
 	if (Array.isArray(path)) {
 		return path.join(".");
 	}
-
 	return path;
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-	if (error instanceof Error && error.message) {
-		return error.message;
-	}
-
-	const maybeMessage = isObjectWithMessage(error) ? error.message : undefined;
-	return typeof maybeMessage === "string" && maybeMessage.length > 0
-		? maybeMessage
-		: fallback;
 }
 
 export function extractValidationErrors(error: unknown) {
 	if (!isValidationLikeError(error)) {
 		return [];
 	}
-
 	const issues = Array.isArray(error.all) ? error.all : [];
-
 	return issues.map((issue) => ({
 		path: normalizePath(issue.path),
 		message: issue.message ?? "Validation error",
 	}));
 }
 
-export function errorSummaryForLog(error: unknown): {
-	name: string;
-	message: string;
-	queryPreview?: string;
-	bindCount?: number;
-} {
-	if (error instanceof DrizzleQueryError) {
-		const cause =
-			error.cause instanceof Error ? error.cause.message : String(error.cause);
-		return {
-			name: error.name,
-			message: cause,
-			queryPreview: error.query.slice(0, 200),
-			bindCount: error.params?.length,
-		};
+function getErrorMessage(error: unknown, fallback: string) {
+	if (error instanceof Error && error.message) {
+		return error.message;
 	}
-	if (error instanceof Error) {
-		return { name: error.name, message: error.message };
-	}
-	return { name: "UnknownError", message: String(error) };
+	const maybeMessage = isObjectWithMessage(error) ? error.message : undefined;
+	return typeof maybeMessage === "string" && maybeMessage.length > 0
+		? maybeMessage
+		: fallback;
 }
 
 export function mapErrorToProblem(options: {
@@ -90,53 +57,80 @@ export function mapErrorToProblem(options: {
 	error: unknown;
 	pathname: string;
 	isProduction: boolean;
-}) {
-	const { error, pathname, isProduction } = options;
+	traceId: string;
+}): ProblemDetails {
+	const { error, pathname, isProduction, traceId } = options;
 	const code = String(options.code);
+
+	if (error instanceof AppError) {
+		return error.toProblem(pathname, traceId);
+	}
+
+	if (error instanceof ZodError) {
+		return ValidationAppError.fromZod(error).toProblem(pathname, traceId);
+	}
 
 	if (code === "VALIDATION") {
 		const issues = extractValidationErrors(error);
 		return {
-			type: "https://cinefy.dev/problems/validation-error",
+			type: PROBLEM_TYPES.VALIDATION_ERROR,
 			title: "Validation Error",
 			status: 400,
 			detail: getErrorMessage(error, "Invalid request payload"),
 			instance: pathname,
+			traceId,
 			errors: issues.length > 0 ? issues : undefined,
-		} satisfies ProblemDetails;
+		};
 	}
 
 	if (code === "NOT_FOUND") {
 		return {
-			type: "https://cinefy.dev/problems/not-found",
+			type: PROBLEM_TYPES.NOT_FOUND,
 			title: "Resource Not Found",
 			status: 404,
 			detail: "The requested resource was not found",
 			instance: pathname,
-		} satisfies ProblemDetails;
+			traceId,
+		};
 	}
 
 	if (code === "PARSE") {
 		return {
-			type: "https://cinefy.dev/problems/parse-error",
+			type: PROBLEM_TYPES.PARSE_ERROR,
 			title: "Invalid Request",
 			status: 400,
 			detail: "The request body is malformed or invalid",
 			instance: pathname,
-		} satisfies ProblemDetails;
+			traceId,
+		};
+	}
+
+	if (error instanceof DrizzleQueryError) {
+		const cause =
+			error.cause instanceof Error ? error.cause.message : String(error.cause);
+		return {
+			type: PROBLEM_TYPES.INTERNAL,
+			title: "Internal Server Error",
+			status: 500,
+			detail: isProduction ? "An unexpected error occurred" : cause,
+			instance: pathname,
+			traceId,
+		};
 	}
 
 	return {
-		type: "https://cinefy.dev/problems/internal-server-error",
+		type: PROBLEM_TYPES.INTERNAL,
 		title: "Internal Server Error",
 		status: 500,
 		detail: isProduction
 			? "An unexpected error occurred"
 			: getErrorMessage(error, "Unknown internal error"),
 		instance: pathname,
-	} satisfies ProblemDetails;
+		traceId,
+	};
 }
 
 export const PROBLEM_JSON_HEADERS = {
 	"content-type": "application/problem+json",
+	"cache-control": "no-store",
 } as const;
