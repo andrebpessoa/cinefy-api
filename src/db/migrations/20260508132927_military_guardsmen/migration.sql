@@ -14,6 +14,15 @@ CREATE TABLE "account" (
 	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "catalog_sync_jobs" (
+	"id" text PRIMARY KEY,
+	"kind" text NOT NULL,
+	"status" text NOT NULL,
+	"error" text,
+	"started_at" timestamp NOT NULL,
+	"finished_at" timestamp
+);
+--> statement-breakpoint
 CREATE TABLE "catalog_sync_state" (
 	"id" text PRIMARY KEY,
 	"last_success_at" timestamp,
@@ -38,7 +47,8 @@ CREATE TABLE "live_stream_items" (
 	"thumbnail" text NOT NULL,
 	"epg_channel_id" text,
 	"raw_payload" jsonb NOT NULL,
-	"synced_at" timestamp DEFAULT now() NOT NULL
+	"synced_at" timestamp DEFAULT now() NOT NULL,
+	"deactivated_at" timestamp
 );
 --> statement-breakpoint
 CREATE TABLE "series_items" (
@@ -64,7 +74,8 @@ CREATE TABLE "series_items" (
 	"last_modified" text NOT NULL,
 	"raw_payload" jsonb NOT NULL,
 	"source_updated_at" timestamp,
-	"synced_at" timestamp DEFAULT now() NOT NULL
+	"synced_at" timestamp DEFAULT now() NOT NULL,
+	"deactivated_at" timestamp
 );
 --> statement-breakpoint
 CREATE TABLE "session" (
@@ -115,10 +126,12 @@ CREATE TABLE "vod_items" (
 	"direct_source" text NOT NULL,
 	"raw_payload" jsonb NOT NULL,
 	"source_updated_at" timestamp,
-	"synced_at" timestamp DEFAULT now() NOT NULL
+	"synced_at" timestamp DEFAULT now() NOT NULL,
+	"deactivated_at" timestamp
 );
 --> statement-breakpoint
 CREATE INDEX "account_userId_idx" ON "account" ("user_id");--> statement-breakpoint
+CREATE INDEX "catalog_sync_jobs_kind_idx" ON "catalog_sync_jobs" ("kind");--> statement-breakpoint
 CREATE UNIQUE INDEX "live_stream_external_id_uq" ON "live_stream_items" ("external_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "series_external_id_uq" ON "series_items" ("external_id");--> statement-breakpoint
 CREATE INDEX "session_userId_idx" ON "session" ("user_id");--> statement-breakpoint
