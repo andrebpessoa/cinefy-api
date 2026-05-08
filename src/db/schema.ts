@@ -106,6 +106,7 @@ export const vodItems = pgTable(
 		rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>().notNull(),
 		sourceUpdatedAt: timestamp("source_updated_at"),
 		syncedAt: timestamp("synced_at").defaultNow().notNull(),
+		deactivatedAt: timestamp("deactivated_at"),
 	},
 	(table) => [uniqueIndex("external_id_uq").on(table.externalId)],
 );
@@ -144,6 +145,7 @@ export const seriesItems = pgTable(
 		rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>().notNull(),
 		sourceUpdatedAt: timestamp("source_updated_at"),
 		syncedAt: timestamp("synced_at").defaultNow().notNull(),
+		deactivatedAt: timestamp("deactivated_at"),
 	},
 	(table) => [uniqueIndex("series_external_id_uq").on(table.externalId)],
 );
@@ -167,6 +169,20 @@ export const liveStreamItems = pgTable(
 		epgChannelId: text("epg_channel_id"),
 		rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>().notNull(),
 		syncedAt: timestamp("synced_at").defaultNow().notNull(),
+		deactivatedAt: timestamp("deactivated_at"),
 	},
 	(table) => [uniqueIndex("live_stream_external_id_uq").on(table.externalId)],
+);
+
+export const catalogSyncJobs = pgTable(
+	"catalog_sync_jobs",
+	{
+		id: text("id").primaryKey(),
+		kind: text("kind").notNull(),
+		status: text("status").notNull(),
+		error: text("error"),
+		startedAt: timestamp("started_at", { mode: "date" }).notNull(),
+		finishedAt: timestamp("finished_at", { mode: "date" }),
+	},
+	(table) => [index("catalog_sync_jobs_kind_idx").on(table.kind)],
 );
