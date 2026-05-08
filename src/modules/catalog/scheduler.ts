@@ -1,15 +1,23 @@
 import { errorSummaryForLog } from "../../lib/errors";
 import { logger } from "../../lib/logger";
-import { type CatalogServiceContract, catalogService } from "./service";
+import type { CatalogSyncKind } from "./kinds/shared";
+import type { CatalogServiceContract } from "./service";
 import { runCatalogSyncIfIdle } from "./sync-coordinator";
-import type { CatalogSyncKind } from "./types";
 
 const DEFAULT_CRON = "*/30 * * * *";
 
+export type SchedulerOptions = {
+	schedule?: string;
+};
+
 export function startCatalogScheduler(
-	service: CatalogServiceContract = catalogService,
+	service: CatalogServiceContract,
+	options?: SchedulerOptions,
 ) {
-	const schedule = process.env.CATALOG_SYNC_CRON?.trim() || DEFAULT_CRON;
+	const schedule =
+		options?.schedule?.trim() ||
+		process.env.CATALOG_SYNC_CRON?.trim() ||
+		DEFAULT_CRON;
 	logger.info({ schedule }, "Catalog Bun.cron scheduler started");
 
 	return Bun.cron(schedule, () => {
@@ -30,9 +38,11 @@ export function startCatalogScheduler(
 		};
 
 		void (async () => {
-			await runKind("vod", () => service.syncVodStreams());
-			await runKind("series", () => service.syncSeriesStreams());
-			await runKind("live", () => service.syncLiveStreams());
+			await Promise.allSettled([
+				runKind("vod", () => service.syncVodStreams()),
+				runKind("series", () => service.syncSeriesStreams()),
+				runKind("live", () => service.syncLiveStreams()),
+			]);
 		})();
 	});
 }

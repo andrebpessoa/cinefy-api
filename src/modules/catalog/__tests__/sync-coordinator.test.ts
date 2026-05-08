@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { runCatalogSyncIfIdle } from "./sync-coordinator";
+import { runCatalogSyncIfIdle } from "../sync-coordinator";
 
 describe("runCatalogSyncIfIdle", () => {
 	it("mesmo kind: segunda execução em paralelo retorna skipped", async () => {

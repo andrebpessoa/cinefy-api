@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { externalSeriesItemSchema } from "./model-series";
+import { externalSeriesItemSchema } from "../model";
 
 describe("externalSeriesItemSchema", () => {
 	it("aceita payload mínimo válido", () => {

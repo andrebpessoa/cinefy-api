@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mapLiveItem } from "./mapper";
+import { mapLiveItem } from "../mapper";
 
 describe("mapLiveItem", () => {
 	it("mapeia stream_id e epg_channel_id", () => {

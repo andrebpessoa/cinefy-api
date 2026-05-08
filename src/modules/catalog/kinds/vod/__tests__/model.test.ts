@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { externalVodListSchema, internalCatalogItemSchema } from "./model";
+import { externalVodListSchema, internalCatalogItemSchema } from "../model";
 
 describe("catalog model schemas", () => {
 	it("aceita lista externa valida", () => {

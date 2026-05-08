@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { externalLiveStreamItemSchema } from "./model-live";
+import { externalLiveStreamItemSchema } from "../model";
 
 describe("externalLiveStreamItemSchema", () => {
 	it("aceita payload mínimo válido", () => {

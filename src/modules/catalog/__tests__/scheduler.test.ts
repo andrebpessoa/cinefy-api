@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { CatalogServiceContract } from "./service";
+import type { CatalogServiceContract } from "../service";
 
 const originalCron = Bun.cron;
 const originalCronEnv = process.env.CATALOG_SYNC_CRON;
+
+const emptyCatalog = { items: [], total: 0, maxSyncedAt: null as Date | null };
 
 describe("startCatalogScheduler", () => {
 	beforeEach(() => {
@@ -29,19 +31,16 @@ describe("startCatalogScheduler", () => {
 		const syncSeriesStreams = mock(async () => {});
 		const syncLiveStreams = mock(async () => {});
 		const service = {
-			getVodCatalog: mock(async () => ({ items: [], total: 0 })),
-			getSeriesCatalog: mock(async () => ({ items: [], total: 0 })),
-			getLiveCatalog: mock(async () => ({ items: [], total: 0 })),
+			getVodCatalog: mock(async () => emptyCatalog),
+			getSeriesCatalog: mock(async () => emptyCatalog),
+			getLiveCatalog: mock(async () => emptyCatalog),
 			getSyncState: mock(async () => null),
 			syncVodStreams,
 			syncSeriesStreams,
 			syncLiveStreams,
 		} satisfies CatalogServiceContract;
 
-		mock.module("./service", () => ({
-			catalogService: service,
-		}));
-		const { startCatalogScheduler } = await import("./scheduler");
+		const { startCatalogScheduler } = await import("../scheduler");
 
 		startCatalogScheduler(service);
 		expect(cronMock).toHaveBeenCalledTimes(1);
@@ -58,25 +57,22 @@ describe("startCatalogScheduler", () => {
 		const syncSeriesStreams = mock(async () => {});
 		const syncLiveStreams = mock(async () => {});
 		const service = {
-			getVodCatalog: mock(async () => ({ items: [], total: 0 })),
-			getSeriesCatalog: mock(async () => ({ items: [], total: 0 })),
-			getLiveCatalog: mock(async () => ({ items: [], total: 0 })),
+			getVodCatalog: mock(async () => emptyCatalog),
+			getSeriesCatalog: mock(async () => emptyCatalog),
+			getLiveCatalog: mock(async () => emptyCatalog),
 			getSyncState: mock(async () => null),
 			syncVodStreams,
 			syncSeriesStreams,
 			syncLiveStreams,
 		} satisfies CatalogServiceContract;
 
-		mock.module("./service", () => ({
-			catalogService: service,
-		}));
-		const { startCatalogScheduler } = await import("./scheduler");
+		const { startCatalogScheduler } = await import("../scheduler");
 
 		startCatalogScheduler(service);
 		expect(cronMock.mock.calls[0]?.[0]).toBe("*/30 * * * *");
 	});
 
-	it("executa sync no callback do cron", async () => {
+	it("executa sync no callback do cron (paralelo por kind)", async () => {
 		let registeredHandler: (() => void) | undefined;
 		const cronMock = mock((_schedule: string, handler: () => void) => {
 			registeredHandler = handler;
@@ -88,25 +84,24 @@ describe("startCatalogScheduler", () => {
 		const syncSeriesStreams = mock(async () => {});
 		const syncLiveStreams = mock(async () => {});
 		const service = {
-			getVodCatalog: mock(async () => ({ items: [], total: 0 })),
-			getSeriesCatalog: mock(async () => ({ items: [], total: 0 })),
-			getLiveCatalog: mock(async () => ({ items: [], total: 0 })),
+			getVodCatalog: mock(async () => emptyCatalog),
+			getSeriesCatalog: mock(async () => emptyCatalog),
+			getLiveCatalog: mock(async () => emptyCatalog),
 			getSyncState: mock(async () => null),
 			syncVodStreams,
 			syncSeriesStreams,
 			syncLiveStreams,
 		} satisfies CatalogServiceContract;
 
-		mock.module("./service", () => ({
-			catalogService: service,
-		}));
-		const { startCatalogScheduler } = await import("./scheduler");
+		const { startCatalogScheduler } = await import("../scheduler");
 
 		startCatalogScheduler(service);
 		expect(typeof registeredHandler).toBe("function");
 		registeredHandler?.();
-		await Bun.sleep(0);
+		await Bun.sleep(50);
 
 		expect(syncVodStreams).toHaveBeenCalled();
+		expect(syncSeriesStreams).toHaveBeenCalled();
+		expect(syncLiveStreams).toHaveBeenCalled();
 	});
 });

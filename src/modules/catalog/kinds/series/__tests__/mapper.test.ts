@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mapSeriesItem } from "./mapper";
+import { mapSeriesItem } from "../mapper";
 
 describe("mapSeriesItem", () => {
 	it("mapeia series_id e release_date", () => {

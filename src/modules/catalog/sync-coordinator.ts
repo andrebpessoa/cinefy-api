@@ -1,5 +1,5 @@
 import { logger } from "../../lib/logger";
-import type { CatalogSyncKind } from "./types";
+import type { CatalogSyncKind } from "./kinds/shared";
 
 const syncBusy: Record<CatalogSyncKind, boolean> = {
 	vod: false,

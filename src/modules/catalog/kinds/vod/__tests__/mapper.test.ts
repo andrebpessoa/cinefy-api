@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { mapVodItem } from "./mapper";
-import type { ExternalVodItem } from "./model";
+import { mapVodItem } from "../mapper";
+import type { ExternalVodItem } from "../model";
 
 describe("mapVodItem", () => {
 	it("mapeia payload externo para modelo interno", () => {
