@@ -6,7 +6,6 @@ node_modules
 !.env.example
 *.md
 !README.md
-coverage
 dist
 .server
 terminals

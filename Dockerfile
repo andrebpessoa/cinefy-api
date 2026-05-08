@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM oven/bun:1 AS build
+FROM oven/bun:1.3.13-slim AS build
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -32,6 +32,9 @@ ENV HOST=0.0.0.0
 ENV MIGRATIONS_FOLDER=/app/db/migrations
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+	CMD-SHELL curl -fsS "http://127.0.0.1:${PORT:-3000}/health" || exit 1
 
 USER nobody:nogroup
 

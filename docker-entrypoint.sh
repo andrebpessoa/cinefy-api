@@ -3,9 +3,9 @@ set -eu
 
 cd /app
 
-if [ "${SKIP_DB_MIGRATIONS:-0}" = "1" ]; then
-	exec ./server
-fi
+case "${SKIP_DB_MIGRATIONS:-false}" in
+	1|true|yes|on) exec ./server ;;
+esac
 
 ./run-migrations
 exec ./server
