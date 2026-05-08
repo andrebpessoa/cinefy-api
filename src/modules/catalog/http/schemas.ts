@@ -11,8 +11,12 @@ export const catalogListQuery = z.object({
 });
 
 const vodCatalogItemResponseSchema = internalCatalogItemSchema
-	.omit({ rawPayload: true })
-	.extend({ id: z.number() });
+	.omit({ rawPayload: true, sourceUpdatedAt: true, syncedAt: true })
+	.extend({
+		id: z.number(),
+		sourceUpdatedAt: z.iso.datetime().nullable(),
+		syncedAt: z.iso.datetime(),
+	});
 
 const seriesCatalogItemResponseSchema = z.object({
 	id: z.number(),
@@ -35,8 +39,8 @@ const seriesCatalogItemResponseSchema = z.object({
 	youtubeTrailer: z.string().nullable(),
 	episodeRunTime: z.string(),
 	lastModified: z.string(),
-	sourceUpdatedAt: z.date().nullable(),
-	syncedAt: z.date(),
+	sourceUpdatedAt: z.iso.datetime().nullable(),
+	syncedAt: z.iso.datetime(),
 });
 
 const liveCatalogItemResponseSchema = z.object({
@@ -54,7 +58,7 @@ const liveCatalogItemResponseSchema = z.object({
 	categoryIds: z.array(z.number()),
 	thumbnail: z.string(),
 	epgChannelId: z.string().nullable(),
-	syncedAt: z.date(),
+	syncedAt: z.iso.datetime(),
 });
 
 const catalogPaginationResponseSchema = z.object({
@@ -65,8 +69,8 @@ const catalogPaginationResponseSchema = z.object({
 });
 
 const catalogSyncMetaResponseSchema = z.object({
-	lastSuccessAt: z.date().nullable(),
-	lastAttemptAt: z.date().nullable(),
+	lastSuccessAt: z.iso.datetime().nullable(),
+	lastAttemptAt: z.iso.datetime().nullable(),
 	lastError: z.string().nullable(),
 	lastItemCount: z.number().nullable(),
 });

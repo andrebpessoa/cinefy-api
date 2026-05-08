@@ -78,7 +78,7 @@ const SYNC_ROUTE_DEFS: readonly SyncRouteDef[] = [
 	},
 ];
 
-function catalogListPayload<TItem>(
+function catalogListPayload<TItem, UItem>(
 	query: { page: number; limit: number },
 	request: Request,
 	set: {
@@ -91,6 +91,7 @@ function catalogListPayload<TItem>(
 		maxSyncedAt: Date | null;
 	},
 	syncState: Awaited<ReturnType<CatalogServiceContract["getSyncState"]>>,
+	mapItem: (item: TItem) => UItem,
 ) {
 	const totalPages = Math.ceil(catalog.total / query.limit);
 	const etag = `W/"${catalog.maxSyncedAt?.getTime() ?? 0}:${catalog.total}"`;
@@ -99,14 +100,14 @@ function catalogListPayload<TItem>(
 		set.headers.etag = etag;
 		set.headers["cache-control"] =
 			"public, max-age=30, stale-while-revalidate=300";
-		return;
+		return null;
 	}
 	set.headers.etag = etag;
 	set.headers["cache-control"] =
 		"public, max-age=30, stale-while-revalidate=300";
 
 	return {
-		items: catalog.items,
+		items: catalog.items.map(mapItem),
 		pagination: {
 			page: query.page,
 			limit: query.limit,
@@ -114,8 +115,8 @@ function catalogListPayload<TItem>(
 			totalPages,
 		},
 		sync: {
-			lastSuccessAt: syncState?.lastSuccessAt ?? null,
-			lastAttemptAt: syncState?.lastAttemptAt ?? null,
+			lastSuccessAt: syncState?.lastSuccessAt?.toISOString() ?? null,
+			lastAttemptAt: syncState?.lastAttemptAt?.toISOString() ?? null,
 			lastError: syncState?.lastError ?? null,
 			lastItemCount: syncState?.lastItemCount ?? null,
 		},
@@ -136,13 +137,24 @@ export function createCatalogModule(
 					service.getVodCatalog(query.page, query.limit),
 					service.getSyncState("vod"),
 				]);
-				return catalogListPayload(query, request, set, catalog, syncState);
+				return catalogListPayload(
+					query,
+					request,
+					set,
+					catalog,
+					syncState,
+					(item) => ({
+						...item,
+						sourceUpdatedAt: item.sourceUpdatedAt?.toISOString() ?? null,
+						syncedAt: item.syncedAt.toISOString(),
+					}),
+				);
 			},
 			{
 				query: catalogListQuery,
 				response: {
 					200: vodCatalogListResponseSchema,
-					304: z.undefined(),
+					304: z.null(),
 				},
 				detail: {
 					tags: ["Catalog"],
@@ -159,13 +171,24 @@ export function createCatalogModule(
 					service.getSeriesCatalog(query.page, query.limit),
 					service.getSyncState("series"),
 				]);
-				return catalogListPayload(query, request, set, catalog, syncState);
+				return catalogListPayload(
+					query,
+					request,
+					set,
+					catalog,
+					syncState,
+					(item) => ({
+						...item,
+						sourceUpdatedAt: item.sourceUpdatedAt?.toISOString() ?? null,
+						syncedAt: item.syncedAt.toISOString(),
+					}),
+				);
 			},
 			{
 				query: catalogListQuery,
 				response: {
 					200: seriesCatalogListResponseSchema,
-					304: z.undefined(),
+					304: z.null(),
 				},
 				detail: {
 					tags: ["Catalog"],
@@ -182,13 +205,23 @@ export function createCatalogModule(
 					service.getLiveCatalog(query.page, query.limit),
 					service.getSyncState("live"),
 				]);
-				return catalogListPayload(query, request, set, catalog, syncState);
+				return catalogListPayload(
+					query,
+					request,
+					set,
+					catalog,
+					syncState,
+					(item) => ({
+						...item,
+						syncedAt: item.syncedAt.toISOString(),
+					}),
+				);
 			},
 			{
 				query: catalogListQuery,
 				response: {
 					200: liveCatalogListResponseSchema,
-					304: z.undefined(),
+					304: z.null(),
 				},
 				detail: {
 					tags: ["Catalog"],
